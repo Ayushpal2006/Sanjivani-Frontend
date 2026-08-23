@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+.venv/
+env/
+venv/
+ENV/
+
+# Python cache & bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+
+# Local database (SQLite transient state)
+*.db
+*.sqlite3
+
+# Environment & Credentials
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE & System files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+scratch/
