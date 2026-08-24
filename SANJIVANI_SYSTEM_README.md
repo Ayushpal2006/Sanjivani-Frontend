@@ -545,49 +545,71 @@ ENVIRONMENT=production
 ADMIN_API_TOKEN=your_production_secure_token
 ```
 
-### Live Production Services
+### Live Production Deployment
 
-| Service | Host / Platform | URL | Purpose |
-|---|---|---|---|
-| Frontend Client | Vercel | Production Deployment Domain | React/Vite SPA user interface & forms |
-| Main Backend | Render | https://sanjivani-main-backend.onrender.com | Central Sanjivani application backend |
-| Main Backend Swagger Docs | Render | https://sanjivani-main-backend.onrender.com/docs | API documentation and manual API testing |
-| Main Backend Health | Render | https://sanjivani-main-backend.onrender.com/health | Main backend health monitoring |
-| ML Service | Render | https://sanjivani-backend-hlvg.onrender.com | Standalone Logistic Regression + safety/triage service |
-| ML Service Health | Render | https://sanjivani-backend-hlvg.onrender.com/health | ML service/model health monitoring |
-| ML Prediction Endpoint | Render | https://sanjivani-backend-hlvg.onrender.com/predict | Internal prediction endpoint called by the main backend |
+| Component | Production URL | Purpose |
+|---|---|---|
+| Frontend | https://sanjivani-frontend-sand.vercel.app/ | User-facing React/Vite application |
+| Main Backend | https://sanjivani-main-backend.onrender.com | Central Sanjivani application API |
+| Main Backend Swagger | https://sanjivani-main-backend.onrender.com/docs | API documentation/testing |
+| Main Backend Health | https://sanjivani-main-backend.onrender.com/health | Backend monitoring |
+| ML Service | https://sanjivani-backend-hlvg.onrender.com | Standalone Logistic Regression + safety/triage service |
+| ML Health | https://sanjivani-backend-hlvg.onrender.com/health | ML service monitoring |
+| ML Predict | https://sanjivani-backend-hlvg.onrender.com/predict | Internal prediction endpoint called by the main backend |
 
 ### Production Request Pipeline
 
 ```text
-Vercel Frontend (React SPA)
-      │
-      │ /api/* (Vercel Rewrites)
-      ▼
-Sanjivani Main Backend
+User / ASHA / Patient
+        │
+        ▼
+Frontend — Vercel
+https://sanjivani-frontend-sand.vercel.app/
+        │
+        │ /api/*
+        ▼
+Main Backend — Render
 https://sanjivani-main-backend.onrender.com
-      │
-      │ POST /predict (Server-to-Server)
-      ▼
-Standalone ML Service
+        │
+        │ POST /predict
+        ▼
+Standalone ML Service — Render
 https://sanjivani-backend-hlvg.onrender.com
-      │
-      ▼
-Logistic Regression
-+
-Safety / Red Flag Rules
-      │
-      ▼
+        │
+        ├── Logistic Regression
+        └── Safety / Red Flag Rules
+        │
+        ▼
 LOW / MODERATE / HIGH / CRITICAL
-      │
-      ▼
+        │
+        ▼
 Main Backend
-      │
-      ▼
-Database + Referral + Follow-up
+        │
+        ├── Database
+        ├── Referral
+        └── Follow-up
+        │
+        ▼
+Frontend Result Screen
 ```
 
-> **Production Rules:**
+#### Key Architecture & Integration Rules:
+- **Frontend Isolation:** The frontend communicates strictly with the **Main Backend**. The frontend must **NOT** call the ML `/predict` endpoint directly.
+- **Persistence & Coordination:** The Main Backend is the central API gateway, patient registry, and workflow persistence layer.
+- **Inference Ownership:** The Standalone ML Service exclusively owns Logistic Regression inference, feature scaling, and safety-aware triage.
+- **Monitoring vs Documentation:** `/docs` is Swagger interactive documentation, not a health probe. `/health` must be used for uptime monitoring.
+
+### Production Monitoring
+
+Recommended UptimeRobot / Ping Monitoring Checks:
+
+1. **Frontend:** `GET https://sanjivani-frontend-sand.vercel.app/`
+2. **Main Backend:** `GET https://sanjivani-main-backend.onrender.com/health`
+3. **ML Service:** `GET https://sanjivani-backend-hlvg.onrender.com/health`
+
+**Expected Result for all monitors:** `HTTP 200`
+
+> **Production Configuration Rules:**
 > 1. When `ENVIRONMENT=production` or `staging`, `ML_API_URL` is mandatory. The application will fail-fast with a configuration error on startup if `ML_API_URL` is omitted.
 > 2. For persistent SQLite storage on Render, attach a Persistent Disk at `/var/data` and configure `DATABASE_URL=sqlite:////var/data/sanjivani.db`. Default when unset is local `./sanjivani.db`.
 
