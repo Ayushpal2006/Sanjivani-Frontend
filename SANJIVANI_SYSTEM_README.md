@@ -248,38 +248,41 @@ The Machine Learning model is **NOT** the final clinical decision-maker. The fin
                         └────────────────────────────────────────┘
 ```
 
-## 8. Statistical ML Prediction vs. Overall Safety Triage
+## 8. ML-Based PCOS Screening with a Lightweight Safety Guardrail
 
-> ⚠️ **ARCHITECTURAL & CLINICAL SEPARATION:**  
-> **Statistical ML Probability ≠ Overall Safety Triage.**  
-> The Scikit-learn Logistic Regression model produces an internal probability estimation based solely on 13 baseline demographic, metabolic, and lifestyle features. **It does NOT and MUST NOT dictate emergency safety outcomes.**  
+> 🎯 **EXPLAINABLE ML-FIRST ARCHITECTURE:**  
+> **The Logistic Regression model performs the primary PCOS-related risk screening using trained clinical and lifestyle features.**  
 > 
-> - **Internal Auditing & Analytics:** Raw `pcos_probability`, `model_prediction`, and `model_prediction_label` are persisted in the database and API responses for audit logs, research, and governance.
-> - **User-Facing UI:** Statistical percentages (e.g., `64.5%`) and model jargon are **hidden** from patient and frontline user-facing result screens. Frontline users see clear, human-readable clinical triage categories (`LOW`, `MODERATE`, `HIGH`, `CRITICAL`), key clinical findings, red flags, and recommended actions.
-> - **Zero-Fabrication Guarantee:** Safety rules **NEVER** alter or fabricate pure ML model probabilities (e.g. Setting `pcos_probability = 1.0` is strictly forbidden).
+> A small deterministic safety layer checks a few already-collected high-risk symptoms such as prolonged bleeding, heavy bleeding, severe pain, vomiting, and blood in stool.
+> 
+> - **Primary Inference**: The Scikit-learn Logistic Regression model evaluates 13 features to produce `pcos_probability`, `model_prediction`, and `model_prediction_label`.
+> - **Guardrail Escalation**: The safety guardrail can **only escalate** the result (e.g. from `LOW` to `HIGH` or `CRITICAL`) and **never downgrades** it.
+> - **Zero-Fabrication Guarantee**: The safety layer never alters or fabricates the model's actual probability (e.g. `pcos_probability` remains genuine).
+> - **User-Facing UI**: Normal users see clean, human-readable clinical triage categories (`LOW`, `MODERATE`, `HIGH`, `CRITICAL`), key findings, and recommended actions. Raw model probability percentages and model jargon are hidden from user UI but preserved internally for audit logs, research, and governance.
 
 ---
 
-## 9. Safety & Red-Flag Layer (Safety Triage V2 Matrix)
+## 9. Lightweight Safety Guardrail
 
-The deterministic safety engine in `ml-service/app/safety_rules.py` enforces strict priority rules (`CRITICAL` > `HIGH` > `MODERATE` > `LOW`):
+The safety layer in `ml-service/app/safety_rules.py` evaluates only existing patient inputs:
 
-### A. Bleeding Duration Bounds
-- **1–7 days:** Normal baseline duration; no escalation based on duration alone.
-- **8–10 days:** Prolonged bleeding ➔ Escalates to at least **`MODERATE`**.
-- **11–20 days:** Significantly prolonged bleeding ➔ Escalates to at least **`HIGH`**.
+### A. Menstrual Bleeding Duration (`bleeding_duration_days` ➔ ML `cycle_length`)
+- **1–7 days:** Normal baseline duration (no duration-only escalation).
+- **8–10 days:** Prolonged bleeding ➔ Minimum **`MODERATE`**.
+- **11–20 days:** Significantly prolonged bleeding ➔ Minimum **`HIGH`**.
 - **≥21 days:** Extremely prolonged bleeding ➔ Forces **`CRITICAL`** emergency triage.
 
-### B. High-Value Safety Symptoms
-- **Acute Hemodynamic Instability:** Fainting, near-fainting, syncope, or significant dizziness.
-- **Respiratory Distress:** Unexplained shortness of breath or difficulty breathing.
-- **Heavy / Rapid Flow:** Soaking through pads/tampons every 1–2 hours, flooding/gushing bleeding, large blood clots.
-- **Pregnancy-Related Emergencies:** Possible pregnancy combined with vaginal bleeding, sudden/severe pelvic pain, one-sided pelvic pain, shoulder-tip pain (diaphragmatic irritation sign), or fainting.
-- **Severe Infectious / GI Red Flags:** Blood in stool (`CRITICAL`), unable to keep fluids down due to persistent vomiting (`HIGH`), fever/chills with pelvic pain (`HIGH`).
+### B. Existing Acute Symptoms
+- **Heavy Bleeding (`heavy_bleeding = true`):** Minimum **`HIGH`**.
+- **Severe Pain (`pain_severity >= 4` ➔ `severe_pain = true`):** Minimum **`HIGH`**.
+  - *Critical combination:* `severe_pain` AND (`heavy_bleeding` OR `vomiting` OR `duration >= 11 days`) ➔ **`CRITICAL`**.
+- **Vomiting (`vomiting = true`):** Minimum **`HIGH`**.
+- **Blood in Stool (`blood_in_stool = true`):** Forces **`CRITICAL`** emergency triage.
 
 ### C. Precedence & Triage Guarantees
-- `CRITICAL` is authoritative and can never be downgraded by any lower rule or low ML probability.
-- All safety rules describe observed clinical risk factors and recommendations; they **do not diagnose** medical conditions.
+- Priority: **`CRITICAL` > `HIGH` > `MODERATE` > `LOW`**.
+- `CRITICAL` can never be downgraded.
+- All safety rules act strictly as non-diagnostic safety guardrails.
 
 ---
 

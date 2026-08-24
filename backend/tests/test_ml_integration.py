@@ -66,17 +66,12 @@ class TestMLPayloadMapper(unittest.TestCase):
     def test_normal_payload_mapping(self):
         ml_payload = build_ml_payload(self.valid_sanjivani_dict)
 
-        # Verify exact 30 fields in ML request payload
+        # Verify exact 16 fields in ML request payload
         expected_keys = {
             "age", "weight", "height", "cycle_type", "cycle_length",
             "weight_gain", "hair_growth", "skin_darkening", "hair_loss", "pimples",
             "fast_food", "regular_exercise", "heavy_bleeding", "severe_pain",
-            "blood_in_stool", "vomiting",
-            "dizziness", "fainting", "shortness_of_breath", "rapid_pad_saturation",
-            "flooding_gushing", "large_blood_clots", "pregnancy_possible",
-            "sudden_severe_pelvic_pain", "one_sided_pelvic_pain", "shoulder_tip_pain",
-            "fever_chills", "unable_to_keep_fluids", "bleeding_between_periods",
-            "bleeding_after_sex"
+            "blood_in_stool", "vomiting"
         }
         self.assertEqual(set(ml_payload.keys()), expected_keys)
 
@@ -97,8 +92,6 @@ class TestMLPayloadMapper(unittest.TestCase):
         self.assertTrue(ml_payload["severe_pain"])  # pain_severity = 4 >= 4
         self.assertFalse(ml_payload["blood_in_stool"])
         self.assertFalse(ml_payload["vomiting"])
-        self.assertFalse(ml_payload["fainting"])
-        self.assertFalse(ml_payload["pregnancy_possible"])
 
         # CRITICAL ASSERTION: The cycle interval string "21-35 days" must NEVER appear as cycle_length
         self.assertNotEqual(ml_payload["cycle_length"], "21-35 days")

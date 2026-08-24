@@ -1,7 +1,7 @@
 from typing import Dict, Any, List, Optional
 from app.schemas import PCOSPredictionRequest, RedFlagItem
 
-# Centralized threshold constants
+# Centralized threshold constants for menstrual duration
 BLEEDING_NORMAL_MIN = 2
 BLEEDING_NORMAL_MAX = 7
 BLEEDING_PROLONGED_MIN = 8
@@ -21,8 +21,8 @@ def evaluate_safety_and_red_flags(
     existing_limitations: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
-    Evaluates acute clinical safety red flags and out-of-distribution training range limitations.
-    Safety symptoms are evaluated deterministically and do NOT alter pure ML model features.
+    Lightweight deterministic safety guardrail evaluating only existing high-risk symptoms.
+    Safety symptoms do NOT alter the Logistic Regression model's pure feature inputs or probability.
     """
     red_flags: List[RedFlagItem] = []
     clinical_reasons: List[str] = []
@@ -73,7 +73,7 @@ def evaluate_safety_and_red_flags(
         if not any(f"{cycle_len} days" in lim and "outside" in lim for lim in model_limitations):
             model_limitations.append(limitation_msg)
 
-    # 2. Bleeding Severity, Flow & Pattern Flags
+    # 2. Bleeding Severity
     if data.heavy_bleeding:
         red_flags.append(RedFlagItem(
             severity="high",
@@ -82,139 +82,31 @@ def evaluate_safety_and_red_flags(
         ))
         clinical_reasons.append("Heavy menstrual bleeding reported.")
 
-    if data.rapid_pad_saturation:
-        red_flags.append(RedFlagItem(
-            severity="high",
-            category="bleeding",
-            message="Rapid pad or tampon saturation (soaking every 1–2 hours or faster) reported."
-        ))
-        clinical_reasons.append("Rapid pad/tampon saturation reported (soaking every 1–2 hours).")
-
-    if data.flooding_gushing:
-        red_flags.append(RedFlagItem(
-            severity="high",
-            category="bleeding",
-            message="Sudden flooding or gushing bleeding reported."
-        ))
-        clinical_reasons.append("Sudden flooding/gushing bleeding reported.")
-
-    if data.large_blood_clots:
-        red_flags.append(RedFlagItem(
-            severity="medium",
-            category="bleeding",
-            message="Passing unusually large blood clots reported."
-        ))
-        clinical_reasons.append("Large blood clots reported during menstruation.")
-
-    if data.bleeding_between_periods:
-        red_flags.append(RedFlagItem(
-            severity="medium",
-            category="bleeding",
-            message="Bleeding or spotting between periods (intermenstrual bleeding) reported."
-        ))
-        clinical_reasons.append("Bleeding between periods reported.")
-
-    if data.bleeding_after_sex:
-        red_flags.append(RedFlagItem(
-            severity="medium",
-            category="bleeding",
-            message="Bleeding after sexual intercourse (postcoital bleeding) reported."
-        ))
-        clinical_reasons.append("Bleeding after sexual intercourse reported.")
-
     # 3. Pain Red Flags
-    if data.sudden_severe_pelvic_pain or data.severe_pain:
+    if data.severe_pain:
         red_flags.append(RedFlagItem(
             severity="high",
             category="pain",
-            message="Severe or sudden pelvic or lower abdominal pain reported."
+            message="Severe pelvic or lower abdominal pain reported."
         ))
-        clinical_reasons.append("Severe or sudden pelvic pain reported.")
+        clinical_reasons.append("Severe pelvic/abdominal pain reported.")
 
-    if data.one_sided_pelvic_pain:
-        red_flags.append(RedFlagItem(
-            severity="high" if data.pregnancy_possible else "medium",
-            category="pain",
-            message="Localized one-sided pelvic pain reported."
-        ))
-        clinical_reasons.append("One-sided pelvic pain reported.")
-
-    if data.shoulder_tip_pain:
-        red_flags.append(RedFlagItem(
-            severity="critical" if data.pregnancy_possible else "high",
-            category="pain",
-            message="Shoulder-tip pain reported (important acute clinical sign)."
-        ))
-        clinical_reasons.append("Shoulder-tip pain reported.")
-
-    # 4. Gastrointestinal & Infectious Red Flags
+    # 4. Gastrointestinal Red Flags
     if data.blood_in_stool:
         red_flags.append(RedFlagItem(
             severity="critical",
             category="gastrointestinal",
-            message="Blood in stool observed — this is a serious general clinical red flag requiring urgent medical evaluation."
+            message="Blood in stool observed — urgent clinical medical evaluation recommended."
         ))
         clinical_reasons.append("Blood observed in stool (general clinical red flag).")
 
-    if data.unable_to_keep_fluids:
-        red_flags.append(RedFlagItem(
-            severity="high",
-            category="gastrointestinal",
-            message="Inability to keep fluids down due to persistent vomiting."
-        ))
-        clinical_reasons.append("Unable to keep fluids down due to persistent vomiting.")
-    elif data.vomiting:
+    if data.vomiting:
         red_flags.append(RedFlagItem(
             severity="high",
             category="gastrointestinal",
             message="Persistent nausea or vomiting reported."
         ))
         clinical_reasons.append("Persistent vomiting reported.")
-
-    if data.fever_chills:
-        red_flags.append(RedFlagItem(
-            severity="high" if (data.severe_pain or data.sudden_severe_pelvic_pain or data.one_sided_pelvic_pain) else "medium",
-            category="infection",
-            message="Fever or chills reported."
-        ))
-        if data.severe_pain or data.sudden_severe_pelvic_pain or data.one_sided_pelvic_pain:
-            clinical_reasons.append("Fever/chills reported with pelvic pain.")
-        else:
-            clinical_reasons.append("Fever or chills reported.")
-
-    # 5. Hemodynamic & Respiratory Red Flags
-    if data.fainting:
-        red_flags.append(RedFlagItem(
-            severity="critical",
-            category="hemodynamic",
-            message="Fainting, near-fainting, or loss of consciousness reported."
-        ))
-        clinical_reasons.append("Fainting or near-fainting reported.")
-
-    if data.dizziness and not data.fainting:
-        red_flags.append(RedFlagItem(
-            severity="high" if (data.heavy_bleeding or data.rapid_pad_saturation or data.flooding_gushing or data.pregnancy_possible) else "medium",
-            category="hemodynamic",
-            message="Significant dizziness or light-headedness reported."
-        ))
-        clinical_reasons.append("Significant dizziness or light-headedness reported.")
-
-    if data.shortness_of_breath:
-        red_flags.append(RedFlagItem(
-            severity="high",
-            category="respiratory",
-            message="Shortness of breath or difficulty breathing reported."
-        ))
-        clinical_reasons.append("Shortness of breath or difficulty breathing reported.")
-
-    # 6. Pregnancy Context
-    if data.pregnancy_possible:
-        red_flags.append(RedFlagItem(
-            severity="high" if (data.heavy_bleeding or data.rapid_pad_saturation or data.flooding_gushing or data.sudden_severe_pelvic_pain or data.one_sided_pelvic_pain or data.shoulder_tip_pain or data.fainting) else "low",
-            category="obstetric",
-            message="Possible pregnancy reported in screening context."
-        ))
-        clinical_reasons.append("Possible pregnancy reported.")
 
     return {
         "red_flags": red_flags,
@@ -230,17 +122,21 @@ def evaluate_overall_triage(
     base_warnings: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
-    Integrates pure ML model inference with deterministic Safety Triage V2 rules.
-    Precedence is strictly CRITICAL > HIGH > MODERATE > LOW.
-    Pure ML probability is NEVER modified or faked.
+    ML-FIRST Triage Architecture with Lightweight Safety Guardrail.
+    
+    1. Primary Risk Engine: Logistic Regression Model (pcos_probability & model_prediction).
+    2. Guardrail Layer: Checks existing acute symptoms (bleeding duration, heavy bleeding, severe pain, vomiting, blood in stool).
+    3. Escalation-Only Guarantee: Guardrail can only ESCALATE triage (CRITICAL > HIGH > MODERATE > LOW).
+    4. Zero-Fabrication Guarantee: Pure ML probability is NEVER altered or faked.
     """
     safety_result = evaluate_safety_and_red_flags(data, existing_limitations=base_warnings)
     red_flags: List[RedFlagItem] = safety_result["red_flags"]
     overall_reasons: List[str] = list(safety_result["clinical_reasons"])
     model_limitations: List[str] = safety_result["model_limitations"]
 
-    # Symptom Pattern Evaluation
     cycle_len = data.cycle_length
+
+    # Evaluate ML-associated clinical patterns for human-readable reasons
     if data.cycle_type.lower() == "irregular":
         overall_reasons.append("Irregular menstrual cycle pattern reported.")
 
@@ -254,108 +150,49 @@ def evaluate_overall_triage(
     if androgenic_symptoms_count >= 3:
         overall_reasons.append(f"Multiple androgenic/metabolic indicators present ({androgenic_symptoms_count} reported).")
 
-    # Grouped Safety Flags
-    is_heavy_or_rapid_bleeding = (
-        data.heavy_bleeding
-        or data.rapid_pad_saturation
-        or data.flooding_gushing
-    )
-    has_severe_pelvic_pain = (
-        data.severe_pain
-        or data.sudden_severe_pelvic_pain
-    )
-    has_pelvic_pain = (
-        has_severe_pelvic_pain
-        or data.one_sided_pelvic_pain
-    )
-    has_vaginal_bleeding = (
-        is_heavy_or_rapid_bleeding
-        or data.bleeding_between_periods
-        or data.bleeding_after_sex
-        or cycle_len > 0
-    )
-
     high_red_flags_count = sum(1 for rf in red_flags if rf.severity in ("high", "critical"))
 
     # =========================================================================
-    # 1. CRITICAL Triage Evaluation (Immediate / Emergency Evaluation)
+    # 1. CRITICAL Tier (Emergency / Immediate Evaluation)
     # =========================================================================
     is_critical = (
-        # Bleeding duration >= 21 days (preserve existing rule)
+        # Bleeding duration >= 21 days
         cycle_len >= BLEEDING_EXTREME_MIN
-        # General acute GI red flag
+        # Blood in stool (acute GI red flag)
         or data.blood_in_stool
-        # Heavy/rapid bleeding + fainting / near-fainting
-        or (is_heavy_or_rapid_bleeding and data.fainting)
-        # Heavy/rapid bleeding + shortness of breath
-        or (is_heavy_or_rapid_bleeding and data.shortness_of_breath)
-        # Heavy/rapid bleeding + significant dizziness
-        or (is_heavy_or_rapid_bleeding and data.dizziness)
-        # Possible pregnancy + vaginal bleeding + sudden/severe pelvic pain
-        or (data.pregnancy_possible and has_vaginal_bleeding and data.sudden_severe_pelvic_pain)
-        # Possible pregnancy + vaginal bleeding + one-sided pelvic pain
-        or (data.pregnancy_possible and has_vaginal_bleeding and data.one_sided_pelvic_pain)
-        # Possible pregnancy + shoulder-tip pain
-        or (data.pregnancy_possible and data.shoulder_tip_pain)
-        # Possible pregnancy + fainting
-        or (data.pregnancy_possible and data.fainting)
-        # Possible pregnancy + severe dizziness
-        or (data.pregnancy_possible and data.dizziness)
-        # Severe pelvic pain + fainting
-        or (has_severe_pelvic_pain and data.fainting)
-        # Severe pelvic pain + difficulty breathing / shortness of breath
-        or (has_severe_pelvic_pain and data.shortness_of_breath)
-        # Severe pelvic pain + heavy/rapid bleeding
-        or (has_severe_pelvic_pain and is_heavy_or_rapid_bleeding)
-        # Existing critical combination: severe pain + vomiting/inability to keep fluids
-        or (data.severe_pain and (data.vomiting or data.unable_to_keep_fluids or cycle_len >= BLEEDING_SIGNIFICANT_MIN))
+        # Severe pain combined with heavy bleeding, persistent vomiting, or duration >= 11 days
+        or (data.severe_pain and (data.heavy_bleeding or data.vomiting or cycle_len >= BLEEDING_SIGNIFICANT_MIN))
     )
 
     # =========================================================================
-    # 2. HIGH Triage Evaluation (Prompt Clinical Assessment)
+    # 2. HIGH Tier (Prompt Clinical Assessment)
     # =========================================================================
     is_high = (
         # Bleeding duration 11–20 days
         (BLEEDING_SIGNIFICANT_MIN <= cycle_len <= BLEEDING_SIGNIFICANT_MAX)
         # Heavy menstrual bleeding
         or data.heavy_bleeding
-        # Pad/tampon soaking every 1–2 hours
-        or data.rapid_pad_saturation
-        # Flooding/gushing bleeding
-        or data.flooding_gushing
-        # Vomiting + unable to keep fluids down / persistent vomiting
-        or data.unable_to_keep_fluids
-        or data.vomiting
-        # Fever/chills + pelvic pain
-        or (data.fever_chills and has_pelvic_pain)
-        # Possible pregnancy + vaginal bleeding
-        or (data.pregnancy_possible and has_vaginal_bleeding)
-        # Possible pregnancy + pelvic pain
-        or (data.pregnancy_possible and has_pelvic_pain)
-        # Severe / sudden pelvic pain (without critical combination)
-        or data.sudden_severe_pelvic_pain
+        # Severe pelvic/abdominal pain
         or data.severe_pain
-        # One-sided pelvic pain
-        or data.one_sided_pelvic_pain
-        # Existing HIGH rules: multiple high red flags or elevated ML probability
+        # Persistent vomiting
+        or data.vomiting
+        # Multiple acute safety red flags
         or (high_red_flags_count >= 2)
+        # High statistical PCOS probability from ML model
         or (pcos_probability >= HIGH_ML_PROBABILITY_THRESHOLD)
     )
 
     # =========================================================================
-    # 3. MODERATE Triage Evaluation (Clinical Consultation Recommended)
+    # 3. MODERATE Tier (Clinical Consultation Recommended)
     # =========================================================================
     is_moderate = (
         # Bleeding duration 8–10 days
         (BLEEDING_PROLONGED_MIN <= cycle_len <= BLEEDING_PROLONGED_MAX)
-        # Bleeding between periods
-        or data.bleeding_between_periods
-        # Bleeding after sex
-        or data.bleeding_after_sex
-        # Large clots without severe bleeding/instability
-        or data.large_blood_clots
-        # Existing moderate rules: ML prediction == 1 or multiple androgenic features
+        # Primary ML prediction is positive (Higher PCOS risk)
         or (model_prediction == 1)
+        # ML screening score elevated
+        or (pcos_probability >= 0.40)
+        # Clinical PCOS pattern indicators
         or (data.cycle_type.lower() == "irregular" and androgenic_symptoms_count >= 2)
         or (cycle_len <= 1 and androgenic_symptoms_count >= 2)
         or (androgenic_symptoms_count >= 3)
@@ -396,3 +233,4 @@ def evaluate_overall_triage(
         "model_limitations": model_limitations,
         "recommendation": recommendation
     }
+

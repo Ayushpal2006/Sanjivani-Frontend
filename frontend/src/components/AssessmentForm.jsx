@@ -41,23 +41,7 @@ export default function AssessmentForm({ onAssessmentComplete, activeRole, lang 
     blood_in_stool: false,
     pain_severity: 1,
     pain_location: 'None',
-    wellbeing: 'Calm / Stable',
-
-    // Safety Triage V2 Specific State
-    dizziness: false,
-    fainting: false,
-    shortness_of_breath: false,
-    rapid_pad_saturation: false,
-    flooding_gushing: false,
-    large_blood_clots: false,
-    pregnancy_possible: false,
-    sudden_severe_pelvic_pain: false,
-    one_sided_pelvic_pain: false,
-    shoulder_tip_pain: false,
-    fever_chills: false,
-    unable_to_keep_fluids: false,
-    bleeding_between_periods: false,
-    bleeding_after_sex: false
+    wellbeing: 'Calm / Stable'
   });
 
   // Calculate BMI dynamically
@@ -460,46 +444,6 @@ export default function AssessmentForm({ onAssessmentComplete, activeRole, lang 
               )}
             </div>
 
-            {/* Additional Bleeding Pattern Checks (Safety V2) */}
-            <div className="space-y-3 pt-2">
-              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                {lang === 'hi' ? 'अतिरिक्त रक्तस्राव लक्षण (Bleeding Pattern Checks)' : 'Specific Bleeding Symptoms & Patterns'}
-              </h4>
-
-              <div className="grid md:grid-cols-2 gap-3">
-                {[
-                  { field: 'rapid_pad_saturation', label: 'Soaking pad/tampon every 1–2 hours or faster', labelHi: 'हर 1-2 घंटे में पैड/टैम्पोन पूरी तरह भीगना' },
-                  { field: 'flooding_gushing', label: 'Sudden flooding or gushing bleeding', labelHi: 'अचानक बहुत तेज़ / बाढ़ जैसा रक्तस्राव' },
-                  { field: 'large_blood_clots', label: 'Passing unusually large blood clots', labelHi: 'बड़े खून के थक्के (Blood Clots) निकलना' },
-                  { field: 'bleeding_between_periods', label: 'Bleeding or spotting between periods', labelHi: 'माहवारी के बीच में खून या धब्बे आना' },
-                  { field: 'bleeding_after_sex', label: 'Bleeding or spotting after sex', labelHi: 'संभोग / शारीरिक संबंध के बाद रक्तस्राव' },
-                ].map((item) => (
-                  <div key={item.field} className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-between">
-                    <div>
-                      <h5 className="font-semibold text-slate-900 text-xs">{item.label}</h5>
-                      <p className="text-[11px] text-slate-500">{item.labelHi}</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                      <button
-                        type="button"
-                        onClick={() => handleInputChange(item.field, true)}
-                        className={`px-3 py-1 rounded-lg text-xs font-bold ${formData[item.field] ? 'bg-red-600 text-white' : 'bg-white border text-slate-700'}`}
-                      >
-                        {lang === 'hi' ? 'हाँ' : 'Yes'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleInputChange(item.field, false)}
-                        className={`px-3 py-1 rounded-lg text-xs font-bold ${!formData[item.field] ? 'bg-slate-700 text-white' : 'bg-white border text-slate-700'}`}
-                      >
-                        {lang === 'hi' ? 'नहीं' : 'No'}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* Symptom Duration */}
             <div>
               <label className="block text-sm font-semibold text-slate-800 mb-2">
@@ -728,17 +672,8 @@ export default function AssessmentForm({ onAssessmentComplete, activeRole, lang 
             <div className="grid md:grid-cols-2 gap-4">
               {[
                 { field: 'blood_in_stool', label: 'Blood in Stool', labelHi: 'मल में खून आना (CRITICAL RED FLAG)', critical: true },
-                { field: 'fainting', label: 'Fainted or Nearly Fainted', labelHi: 'बेहोशी या चक्कर खाकर गिरना (CRITICAL SIGN)', critical: true },
-                { field: 'dizziness', label: 'Feeling Dizzy or Light-headed', labelHi: 'अत्यधिक चक्कर या सिर हल्का महसूस होना' },
-                { field: 'shortness_of_breath', label: 'Shortness of Breath / Difficulty Breathing', labelHi: 'सांस लेने में कठिनाई / सांस फूलना' },
-                { field: 'pregnancy_possible', label: 'Possibility of Current Pregnancy', labelHi: 'गर्भवती होने की संभावना' },
-                { field: 'sudden_severe_pelvic_pain', label: 'Sudden & Extremely Severe Pelvic Pain', labelHi: 'अचानक और अत्यधिक तीव्र पेल्विक दर्द' },
-                { field: 'one_sided_pelvic_pain', label: 'Pelvic Pain Mainly on One Side', labelHi: 'दर्द मुख्य रूप से एक तरफ (One-sided)' },
-                { field: 'shoulder_tip_pain', label: 'Pain at the Tip of Shoulder', labelHi: 'कंधे के ऊपरी सिरे (Shoulder-tip) में दर्द' },
-                { field: 'fever_chills', label: 'Current Fever or Shaking Chills', labelHi: 'बुखार या ठंड/कंपकंपी लगना' },
-                { field: 'unable_to_keep_fluids', label: 'Unable to Keep Fluids Down Due to Vomiting', labelHi: 'उल्टी के कारण पानी/तरल भी न रुकना' },
-                { field: 'vomiting', label: 'Persistent Nausea / Vomiting', labelHi: 'उल्टी या लगातार जी मिचलाना' },
-                { field: 'stomach_pain', label: 'Stomach / Abdominal Pain', labelHi: 'पेट में दर्द' },
+                { field: 'stomach_pain', label: 'Stomach / Severe Abdominal Pain', labelHi: 'अत्यधिक पेट दर्द' },
+                { field: 'vomiting', label: 'Vomiting / Acute Nausea', labelHi: 'उल्टी होना' },
                 { field: 'diarrhea', label: 'Diarrhea', labelHi: 'दस्त' },
                 { field: 'bloating', label: 'Abdominal Bloating', labelHi: 'पेट फूलना' },
               ].map((item) => (

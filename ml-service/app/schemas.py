@@ -94,64 +94,6 @@ class PCOSPredictionRequest(BaseModel):
         description="Persistent nausea or vomiting"
     )
 
-    # Deterministic Safety Triage V2 Inputs
-    dizziness: bool = Field(
-        default=False,
-        description="Significant dizziness or light-headedness"
-    )
-    fainting: bool = Field(
-        default=False,
-        description="Fainting, near-fainting, or syncope"
-    )
-    shortness_of_breath: bool = Field(
-        default=False,
-        description="Unusual shortness of breath or difficulty breathing"
-    )
-    rapid_pad_saturation: bool = Field(
-        default=False,
-        description="Soaking through pad or tampon approximately every 1-2 hours or faster"
-    )
-    flooding_gushing: bool = Field(
-        default=False,
-        description="Sudden flooding or gushing bleeding"
-    )
-    large_blood_clots: bool = Field(
-        default=False,
-        description="Passing unusually large blood clots"
-    )
-    pregnancy_possible: bool = Field(
-        default=False,
-        description="Possibility of current pregnancy"
-    )
-    sudden_severe_pelvic_pain: bool = Field(
-        default=False,
-        description="Sudden, sharp, or extremely severe pelvic/lower abdominal pain"
-    )
-    one_sided_pelvic_pain: bool = Field(
-        default=False,
-        description="Pelvic or lower abdominal pain primarily localized to one side"
-    )
-    shoulder_tip_pain: bool = Field(
-        default=False,
-        description="Unexplained sharp pain at the tip of the shoulder (diaphragmatic irritation sign)"
-    )
-    fever_chills: bool = Field(
-        default=False,
-        description="Current fever, high temperature, or shaking chills"
-    )
-    unable_to_keep_fluids: bool = Field(
-        default=False,
-        description="Unable to keep liquids/fluids down due to severe vomiting"
-    )
-    bleeding_between_periods: bool = Field(
-        default=False,
-        description="Vaginal spotting or bleeding between regular menstrual periods (intermenstrual bleeding)"
-    )
-    bleeding_after_sex: bool = Field(
-        default=False,
-        description="Vaginal bleeding or spotting after sexual intercourse (postcoital bleeding)"
-    )
-
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -170,21 +112,7 @@ class PCOSPredictionRequest(BaseModel):
                 "heavy_bleeding": False,
                 "severe_pain": False,
                 "blood_in_stool": False,
-                "vomiting": False,
-                "dizziness": False,
-                "fainting": False,
-                "shortness_of_breath": False,
-                "rapid_pad_saturation": False,
-                "flooding_gushing": False,
-                "large_blood_clots": False,
-                "pregnancy_possible": False,
-                "sudden_severe_pelvic_pain": False,
-                "one_sided_pelvic_pain": False,
-                "shoulder_tip_pain": False,
-                "fever_chills": False,
-                "unable_to_keep_fluids": False,
-                "bleeding_between_periods": False,
-                "bleeding_after_sex": False
+                "vomiting": False
             }
         }
     )
