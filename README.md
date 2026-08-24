@@ -28,6 +28,49 @@ For deep-dive documentation on request/response data flows, the 13-feature ML mo
 
 ---
 
+## Production Deployment
+
+```text
+User / Frontend
+      │
+      ▼
+Sanjivani Main Backend
+https://sanjivani-main-backend.onrender.com
+      │
+      │ POST /predict
+      ▼
+Standalone ML Service
+https://sanjivani-backend-hlvg.onrender.com
+      │
+      ▼
+Logistic Regression
++
+Safety / Red Flag Rules
+      │
+      ▼
+LOW / MODERATE / HIGH / CRITICAL
+      │
+      ▼
+Main Backend
+      │
+      ▼
+Database + Referral + Follow-up
+```
+
+### Production Services
+
+| Service | URL | Purpose |
+|---|---|---|
+| Main Backend | https://sanjivani-main-backend.onrender.com | Central Sanjivani application backend |
+| Main Backend Swagger Docs | https://sanjivani-main-backend.onrender.com/docs | API documentation and manual API testing |
+| Main Backend Health | https://sanjivani-main-backend.onrender.com/health | Main backend health monitoring |
+| ML Service | https://sanjivani-backend-hlvg.onrender.com | Standalone Logistic Regression + safety/triage service |
+| ML Service Health | https://sanjivani-backend-hlvg.onrender.com/health | ML service/model health monitoring |
+| ML Prediction Endpoint | https://sanjivani-backend-hlvg.onrender.com/predict | Internal prediction endpoint called by the main backend |
+
+
+---
+
 ## 🛡️ Ownership Boundaries & Responsibilities
 
 | Responsibility | Frontend (`frontend/`) | Main Backend (`backend/`) | ML Service (`ml-service/`) |
