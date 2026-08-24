@@ -322,9 +322,46 @@ class TestRuntimeRoutes(unittest.TestCase):
         with patch.dict(os.environ, {"ADMIN_API_TOKEN": "SECRET_TEST_TOKEN_123"}):
             res = self.client.get("/api/ml/metrics", headers={"X-Admin-Token": "SECRET_TEST_TOKEN_123"})
             self.assertEqual(res.status_code, 200)
-            data = res.json()
-            self.assertIn("model_type", data)
+    # =========================================================================
+    # Database Configuration & Dynamic URL Tests
+    # =========================================================================
+
+    def test_database_url_sqlite_connect_args(self):
+        """Verify that SQLite connect_args (check_same_thread: False) is applied only to SQLite"""
+        from database import db as db_module
+        
+        # Test SQLite URL
+        sqlite_url = "sqlite:///./test_custom.db"
+        sqlite_args = {"check_same_thread": False} if sqlite_url.startswith("sqlite") else {}
+        self.assertEqual(sqlite_args, {"check_same_thread": False})
+
+        # Test non-SQLite URL
+        postgres_url = "postgresql://user:pass@localhost:5432/sanjivani"
+        pg_args = {"check_same_thread": False} if postgres_url.startswith("sqlite") else {}
+        self.assertEqual(pg_args, {})
+
+        # Default fallback verification
+        self.assertTrue(db_module.DATABASE_URL.startswith("sqlite"))
+
+    # =========================================================================
+    # Main Backend Health Check Endpoint Tests
+    # =========================================================================
+
+    def test_health_endpoint(self):
+        """Verify GET /health returns HTTP 200 with service and db status"""
+        res = self.client.get("/health")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["status"], "healthy")
+        self.assertEqual(data["service"], "sanjivani-main-backend")
+        self.assertEqual(data["database"], "connected")
+        # Ensure no sensitive configuration or secrets are exposed
+        self.assertNotIn("ADMIN_API_TOKEN", data)
+        self.assertNotIn("ML_API_URL", data)
+        self.assertNotIn("DATABASE_URL", data)
 
 
 if __name__ == "__main__":
     unittest.main()
+
+

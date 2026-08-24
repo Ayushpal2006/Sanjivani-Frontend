@@ -14,35 +14,17 @@
 
 ---
 
+## 📖 Detailed System & ML Architecture Guide
+
+For deep-dive documentation on request/response data flows, the 13-feature ML model, deterministic safety rules, semantic cycle length isolation, and failure modes, see:
+
+👉 **[SANJIVANI_SYSTEM_README.md](SANJIVANI_SYSTEM_README.md)**
+
+---
+
 ## 🏗️ System Architecture
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                    React Frontend Client                    │
-│            (Port 5173 - User Interface & Forms)             │
-└──────────────────────────────┬──────────────────────────────┘
-                               │ HTTPS / REST (Exclusive)
-                               ▼
-┌─────────────────────────────────────────────────────────────┐
-│                  Main Sanjivani Backend                     │
-│                (Port 8000 - FastAPI Core)                   │
-│  - Patient Registry & Assessments Persistence               │
-│  - Automated Referrals & Follow-Up Scheduling               │
-│  - Role Scoping & ASHA Dashboard                            │
-│  - Integration Mapper & Response Compatibility Adapter      │
-└──────────────────────────────┬──────────────────────────────┘
-                               │ Server-to-Server HTTP
-                               ▼
-┌─────────────────────────────────────────────────────────────┐
-│           Standalone ML & Triage Microservice               │
-│               (Port 8001 - /predict API)                    │
-│  - 13-Feature Preprocessing & StandardScaler                │
-│  - Logistic Regression Inference & Probability Estimation   │
-│  - Deterministic Safety Rules & Red Flag Detection          │
-│  - Canonical Triage (LOW / MODERATE / HIGH / CRITICAL)      │
-│  - Model Limitations & Disclaimers                          │
-└─────────────────────────────────────────────────────────────┘
-```
+![Sanjivani System Architecture](docs/assets/sanjivani-architecture.svg)
 
 ---
 
@@ -192,6 +174,7 @@ ENVIRONMENT=development \
 ADMIN_API_TOKEN=your_local_dev_token \
 python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload
 ```
+*Health Check: `curl http://127.0.0.1:8000/health`*  
 *Live Stats Check: `curl http://127.0.0.1:8000/api/dashboard/stats`*
 
 ### Terminal 3 — React Vite Frontend (Port 5173)

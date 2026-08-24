@@ -7,6 +7,7 @@ import urllib.request
 import urllib.parse
 from fastapi import FastAPI, Depends, HTTPException, Query, Header
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from database.db import get_db, engine, Base
@@ -45,6 +46,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# -------------------------------------------------------------
+# 0. SYSTEM HEALTH CHECK
+# -------------------------------------------------------------
+@app.get("/health", tags=["System"])
+def health_check(db: Session = Depends(get_db)):
+    """
+    Lightweight health-check endpoint for process liveness and database connectivity.
+    Does NOT invoke external ML service or perform expensive operations.
+    """
+    db_status = "connected"
+    try:
+        db.execute(text("SELECT 1"))
+    except Exception:
+        db_status = "error"
+
+    return {
+        "status": "healthy" if db_status == "connected" else "degraded",
+        "service": "sanjivani-main-backend",
+        "database": db_status,
+    }
 
 # Helper: Calculate Haversine distance in KM
 def calculate_haversine_distance(lat1, lon1, lat2, lon2):
