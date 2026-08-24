@@ -36,6 +36,8 @@ class Assessment(Base):
     # Menstrual
     cycle_length = Column(String) # <21, 21-35, >35, Varies
     cycle_regularity = Column(String) # Regular, Irregular, Missed
+    bleeding_duration_days = Column(Integer, nullable=True)
+    heavy_bleeding = Column(Boolean, nullable=True)
     symptom_duration = Column(String) # <1mo, 1-3mo, 3-6mo, >6mo
 
     # PCOS symptoms
@@ -65,13 +67,27 @@ class Assessment(Base):
     pain_location = Column(String, default="None")
     wellbeing = Column(String, default="Calm / Stable")
 
-    # Engine Outputs
+    # Engine Outputs (Legacy Compatibility)
     risk_probability = Column(Float)
     risk_category = Column(String)
     triage_level = Column(String) # LEVEL 1, LEVEL 2, LEVEL 3
     red_flag_triggered = Column(Boolean, default=False)
     reasons_json = Column(Text) # JSON string of plain language reason cards
     submitted_by_role = Column(String, default="ASHA") # ASHA or Patient
+
+    # Standalone External ML Microservice Canonical Outputs
+    ml_available = Column(Boolean, nullable=True, default=True)
+    ml_error = Column(String, nullable=True)
+    pcos_probability = Column(Float, nullable=True)
+    model_prediction = Column(Integer, nullable=True)
+    model_prediction_label = Column(String, nullable=True)
+    overall_prediction = Column(String, nullable=True) # Canonical: LOW, MODERATE, HIGH, CRITICAL
+    overall_reasons_json = Column(Text, nullable=True) # JSON array of str
+    red_flags_json = Column(Text, nullable=True) # JSON array of dicts
+    recommendation = Column(Text, nullable=True)
+    warnings_json = Column(Text, nullable=True) # JSON array of str
+    model_limitations_json = Column(Text, nullable=True) # JSON array of str
+    disclaimer = Column(Text, nullable=True)
 
     patient = relationship("Patient", back_populates="assessments")
 
