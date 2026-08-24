@@ -547,25 +547,27 @@ ADMIN_API_TOKEN=your_production_secure_token
 
 ### Live Production Services
 
-| Service | URL | Purpose |
-|---|---|---|
-| Main Backend | https://sanjivani-main-backend.onrender.com | Central Sanjivani application backend |
-| Main Backend Swagger Docs | https://sanjivani-main-backend.onrender.com/docs | API documentation and manual API testing |
-| Main Backend Health | https://sanjivani-main-backend.onrender.com/health | Main backend health monitoring |
-| ML Service | https://sanjivani-backend-hlvg.onrender.com | Standalone Logistic Regression + safety/triage service |
-| ML Service Health | https://sanjivani-backend-hlvg.onrender.com/health | ML service/model health monitoring |
-| ML Prediction Endpoint | https://sanjivani-backend-hlvg.onrender.com/predict | Internal prediction endpoint called by the main backend |
+| Service | Host / Platform | URL | Purpose |
+|---|---|---|---|
+| Frontend Client | Vercel | Production Deployment Domain | React/Vite SPA user interface & forms |
+| Main Backend | Render | https://sanjivani-main-backend.onrender.com | Central Sanjivani application backend |
+| Main Backend Swagger Docs | Render | https://sanjivani-main-backend.onrender.com/docs | API documentation and manual API testing |
+| Main Backend Health | Render | https://sanjivani-main-backend.onrender.com/health | Main backend health monitoring |
+| ML Service | Render | https://sanjivani-backend-hlvg.onrender.com | Standalone Logistic Regression + safety/triage service |
+| ML Service Health | Render | https://sanjivani-backend-hlvg.onrender.com/health | ML service/model health monitoring |
+| ML Prediction Endpoint | Render | https://sanjivani-backend-hlvg.onrender.com/predict | Internal prediction endpoint called by the main backend |
 
 ### Production Request Pipeline
 
 ```text
-User / Frontend
+Vercel Frontend (React SPA)
       │
+      │ /api/* (Vercel Rewrites)
       ▼
 Sanjivani Main Backend
 https://sanjivani-main-backend.onrender.com
       │
-      │ POST /predict
+      │ POST /predict (Server-to-Server)
       ▼
 Standalone ML Service
 https://sanjivani-backend-hlvg.onrender.com
