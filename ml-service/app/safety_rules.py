@@ -40,7 +40,7 @@ def evaluate_safety_and_red_flags(
             category="bleeding_duration",
             message=f"Prolonged bleeding duration detected ({cycle_len} days)."
         ))
-        clinical_reasons.append(f"Prolonged menstrual bleeding reported ({cycle_len} days).")
+        clinical_reasons.append(f"Prolonged bleeding duration reported ({cycle_len} days).")
 
     elif BLEEDING_SIGNIFICANT_MIN <= cycle_len <= BLEEDING_SIGNIFICANT_MAX:
         red_flags.append(RedFlagItem(
@@ -48,12 +48,12 @@ def evaluate_safety_and_red_flags(
             category="bleeding_duration",
             message=f"Significantly prolonged bleeding duration detected ({cycle_len} days)."
         ))
-        clinical_reasons.append(f"Significantly prolonged bleeding duration reported ({cycle_len} days).")
+        clinical_reasons.append(f"Prolonged bleeding duration reported ({cycle_len} days).")
         if cycle_len > TRAINING_CYCLE_LENGTH_MAX:
             limitation_msg = (
-                f"The provided cycle length ({cycle_len} days) is outside the range "
-                f"({TRAINING_CYCLE_LENGTH_MIN}–{TRAINING_CYCLE_LENGTH_MAX} days) observed during ML model training. "
-                f"The ML probability was calculated using a capped value ({TRAINING_CYCLE_LENGTH_MAX} days) and may be less reliable for this input."
+                f"Bleeding duration of {cycle_len} days is outside the model's observed training range "
+                f"({TRAINING_CYCLE_LENGTH_MIN}–{TRAINING_CYCLE_LENGTH_MAX} days). "
+                f"Model inference used the configured capped value ({TRAINING_CYCLE_LENGTH_MAX} days)."
             )
             if not any(f"{cycle_len} days" in lim and "outside" in lim for lim in model_limitations):
                 model_limitations.append(limitation_msg)
@@ -66,9 +66,9 @@ def evaluate_safety_and_red_flags(
         ))
         clinical_reasons.append(f"Extremely prolonged bleeding duration reported ({cycle_len} days).")
         limitation_msg = (
-            f"The cycle length value ({cycle_len} days) is significantly outside the ML model training range "
+            f"Bleeding duration of {cycle_len} days is outside the model's observed training range "
             f"({TRAINING_CYCLE_LENGTH_MIN}–{TRAINING_CYCLE_LENGTH_MAX} days). "
-            f"The ML probability was calculated using a capped value ({TRAINING_CYCLE_LENGTH_MAX} days) and should not be used as a primary diagnostic indicator."
+            f"Model inference used the configured capped value ({TRAINING_CYCLE_LENGTH_MAX} days)."
         )
         if not any(f"{cycle_len} days" in lim and "outside" in lim for lim in model_limitations):
             model_limitations.append(limitation_msg)
@@ -89,7 +89,7 @@ def evaluate_safety_and_red_flags(
             category="pain",
             message="Severe pelvic or lower abdominal pain reported."
         ))
-        clinical_reasons.append("Severe pelvic/abdominal pain reported.")
+        clinical_reasons.append("Severe pain reported.")
 
     # 4. Gastrointestinal Red Flags
     if data.blood_in_stool:
@@ -98,7 +98,7 @@ def evaluate_safety_and_red_flags(
             category="gastrointestinal",
             message="Blood in stool observed — urgent clinical medical evaluation recommended."
         ))
-        clinical_reasons.append("Blood observed in stool (general clinical red flag).")
+        clinical_reasons.append("Blood in stool reported.")
 
     if data.vomiting:
         red_flags.append(RedFlagItem(
@@ -106,7 +106,7 @@ def evaluate_safety_and_red_flags(
             category="gastrointestinal",
             message="Persistent nausea or vomiting reported."
         ))
-        clinical_reasons.append("Persistent vomiting reported.")
+        clinical_reasons.append("Vomiting reported.")
 
     return {
         "red_flags": red_flags,
@@ -131,14 +131,43 @@ def evaluate_overall_triage(
     """
     safety_result = evaluate_safety_and_red_flags(data, existing_limitations=base_warnings)
     red_flags: List[RedFlagItem] = safety_result["red_flags"]
-    overall_reasons: List[str] = list(safety_result["clinical_reasons"])
     model_limitations: List[str] = safety_result["model_limitations"]
 
     cycle_len = data.cycle_length
 
-    # Evaluate ML-associated clinical patterns for human-readable reasons
+    # Structured Prioritization of Legitimate User-Facing Clinical Reasons:
+    # Priority 1: Critical/High Safety Findings
+    safety_findings: List[str] = list(safety_result["clinical_reasons"])
+
+    # Priority 2: Menstrual Abnormalities
+    menstrual_findings: List[str] = []
     if data.cycle_type.lower() == "irregular":
-        overall_reasons.append("Irregular menstrual cycle pattern reported.")
+        menstrual_findings.append("Irregular menstrual cycle pattern reported.")
+
+    # Priority 3: Strong PCOS-Related Clinical Features
+    pcos_findings: List[str] = []
+    if data.weight_gain:
+        pcos_findings.append("Recent weight gain reported.")
+    if data.hair_growth:
+        pcos_findings.append("Increased facial hair growth reported.")
+    if data.pimples:
+        pcos_findings.append("Acne/pimples reported.")
+    if data.hair_loss:
+        pcos_findings.append("Hair loss reported.")
+    if data.skin_darkening:
+        pcos_findings.append("Skin darkening reported.")
+
+    # Priority 4: Lifestyle Context
+    lifestyle_findings: List[str] = []
+    if data.fast_food:
+        lifestyle_findings.append("Frequent fast-food intake reported.")
+    if not data.regular_exercise:
+        lifestyle_findings.append("Limited regular exercise reported.")
+
+    # Assemble prioritized clinical reasons (Deduplicated)
+    overall_reasons = list(dict.fromkeys(
+        safety_findings + menstrual_findings + pcos_findings + lifestyle_findings
+    ))
 
     androgenic_symptoms_count = sum([
         data.weight_gain,

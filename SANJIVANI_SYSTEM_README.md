@@ -792,3 +792,30 @@ cd frontend && npm run build && cd ..
 4. **Authoritative Triage:** The external ML service is the sole authoritative source of canonical triage (`LOW`, `MODERATE`, `HIGH`, `CRITICAL`).
 5. **Preserve CRITICAL:** Canonical `CRITICAL` triage must remain permanently preserved in the database and user interface.
 6. **Role-Based Security:** Action buttons (*Create Referral*, *Schedule Follow-up*) are strictly restricted to authenticated ASHA Workers and concealed from patient views.
+
+---
+
+## 21. PWA / Installable Web App & Health Privacy Caching
+
+Sanjivani's React/Vite frontend is an installable **Progressive Web App (PWA)** optimized for frontline ASHA health workers and rural patients on mobile and desktop browsers.
+
+- **Deployed Frontend URL:** `https://sanjivani-frontend-sand.vercel.app/`
+- **PWA Manifest Details:**
+  - Name: `Sanjivani`
+  - Short Name: `Sanjivani`
+  - Theme Color: `#065f46` (Emerald Brand)
+  - Display Mode: `standalone`
+  - Start URL / Scope: `/`
+  - Icons: `pwa-192x192.png`, `pwa-512x512.png`, `maskable-icon-512x512.png`, `apple-touch-icon.png`
+
+### Strict Health Privacy & Zero-API-Caching Policy:
+> 🔒 **HEALTH DATA PRIVACY GUARANTEE:**
+> - **Zero Cache for Patient APIs:** All endpoints under `/api/*` (`/api/assessments`, `/api/patients/*`, `/api/referrals/*`, `/api/followups/*`) use strict **`NetworkOnly`** behavior.
+> - **No Offline Assessment Queuing:** Patient assessments and personal health data are **never** cached, persisted in service worker storage, or silently queued offline.
+> - **Live Connection Required:** Live internet connectivity is strictly required to submit clinical assessments. If offline, the UI blocks submission with a clear notice: *"Internet connection is required to submit an assessment."*
+> - **Cached Resources:** Only static assets (HTML shell, compiled JavaScript bundles, CSS stylesheets, brand SVGs/PNGs, web fonts) are cached for lightning-fast loading.
+
+### Internal API vs. Patient-Facing UI Separation:
+- **Internal / Developer API (`/api/assessments`, `POST /predict`):** Preserves raw `pcos_probability`, binary `model_prediction`, out-of-distribution `warnings`, model capping notes, and `model_limitations` for research, auditing, and clinical governance.
+- **Patient-Facing UI (`TriageResultView`):** Shows clean, prioritized human-readable findings (maximum 4 by default with an expandable *"View all findings"* toggle) across 4 structured categories (*Safety Red Flag*, *Menstrual Pattern*, *PCOS-Related Feature*, *Lifestyle Context*). Technical training-range language and ML probabilities are strictly excluded from patient view.
+

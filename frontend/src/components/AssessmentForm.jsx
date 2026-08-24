@@ -86,6 +86,16 @@ export default function AssessmentForm({ onAssessmentComplete, activeRole, lang 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // PWA Offline Guard: Live internet is required for clinical assessment submission
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      alert(
+        lang === 'hi'
+          ? 'मूल्यांकन जमा करने के लिए इंटरनेट कनेक्शन आवश्यक है।'
+          : 'Internet connection is required to submit an assessment.'
+      );
+      return;
+    }
+
     // Enforce step 3 validation before submitting
     if (
       formData.bleeding_duration_days === '' ||

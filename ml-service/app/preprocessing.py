@@ -69,9 +69,9 @@ def preprocess_input(data: PCOSPredictionRequest) -> Dict[str, Any]:
 
     if original_cycle_length < CYCLE_LENGTH_MIN_TRAINING or original_cycle_length > CYCLE_LENGTH_MAX_TRAINING:
         warnings.append(
-            f"The provided cycle length ({original_cycle_length} days) is outside the range "
-            f"({CYCLE_LENGTH_MIN_TRAINING}–{CYCLE_LENGTH_MAX_TRAINING} days) observed during ML model training. "
-            f"The ML probability was calculated using a capped value ({CYCLE_LENGTH_MAX_TRAINING} days) and may be less reliable for this input."
+            f"Bleeding duration of {original_cycle_length} days is outside the model's observed training range "
+            f"({CYCLE_LENGTH_MIN_TRAINING}–{CYCLE_LENGTH_MAX_TRAINING} days). "
+            f"Model inference used the configured capped value ({CYCLE_LENGTH_MAX_TRAINING} days)."
         )
         model_cycle_length = min(max(original_cycle_length, CYCLE_LENGTH_MIN_TRAINING), CYCLE_LENGTH_MAX_TRAINING)
 

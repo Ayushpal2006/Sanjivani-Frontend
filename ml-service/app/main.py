@@ -105,6 +105,10 @@ def predict(data: PCOSPredictionRequest):
             base_warnings=base_warnings
         )
 
+        # Deduplicate model limitations and warnings
+        deduped_limitations = list(dict.fromkeys(triage_result["model_limitations"]))
+        deduped_warnings = list(dict.fromkeys(base_warnings + deduped_limitations))
+
         # 4. Assemble Structured API Response
         return PCOSPredictionResponse(
             # ML Model outputs
@@ -116,7 +120,7 @@ def predict(data: PCOSPredictionRequest):
             overall_prediction=triage_result["overall_prediction"],
             overall_reasons=triage_result["overall_reasons"],
             red_flags=triage_result["red_flags"],
-            model_limitations=triage_result["model_limitations"],
+            model_limitations=deduped_limitations,
             recommendation=triage_result["recommendation"],
 
             # Compatibility & calculated metrics
@@ -124,7 +128,7 @@ def predict(data: PCOSPredictionRequest):
             bmi=round(bmi, 2),
             triage_level=triage_result["overall_prediction"].lower(),
             disclaimer="This is an AI-assisted early screening and triage assessment and not a medical diagnosis.",
-            warnings=triage_result["model_limitations"]
+            warnings=deduped_warnings
         )
 
     except Exception as e:

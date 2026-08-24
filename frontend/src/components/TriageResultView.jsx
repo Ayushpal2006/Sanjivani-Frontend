@@ -4,6 +4,7 @@ import { AlertTriangle, CheckCircle2, Info, ArrowRight, Calendar, Building2, Use
 export default function TriageResultView({ assessmentResult, onReset, activeRole, lang }) {
   const [referralCreated, setReferralCreated] = useState(false);
   const [followupScheduled, setFollowupScheduled] = useState(false);
+  const [showAllFindings, setShowAllFindings] = useState(false);
 
   if (!assessmentResult || (!assessmentResult.triage_result && !assessmentResult.ml_assessment)) {
     return <div className="p-8 text-center text-slate-500">No assessment result loaded.</div>;
@@ -29,12 +30,17 @@ export default function TriageResultView({ assessmentResult, onReset, activeRole
   const recommendationText = ml?.recommendation || legacy.recommended_action || 'Consult with a healthcare provider for comprehensive evaluation.';
   const recommendationTextHindi = legacy.recommended_action_hindi || '';
 
-  // Authoritative Clinical Reasons (Filtered to remove model-specific strings from user presentation)
-  const rawReasons = ml?.overall_reasons && ml.overall_reasons.length > 0
-    ? ml.overall_reasons
-    : (legacy.reasons ? legacy.reasons.map(r => (typeof r === 'string' ? r : r.title)) : []);
+  // Clean clinical text by removing any technical artifacts like '(outside ML training range)', '(capped value)', etc.
+  const cleanClinicalText = (text) => {
+    if (!text) return '';
+    return String(text)
+      .replace(/\s*\(?\s*(?:significantly\s+)?outside\s+(?:the\s+|ml\s+)?(?:model\s+)?training\s+range\s*\)?/gi, '')
+      .replace(/\s*\(?\s*capped\s+value\s*\)?/gi, '')
+      .replace(/\s*\(?\s*less\s+reliable\s*\)?/gi, '')
+      .trim();
+  };
 
-  const isModelSpecificReason = (str) => {
+  const isTechnicalReason = (str) => {
     if (!str) return true;
     const lower = String(str).toLowerCase();
     return (
@@ -44,19 +50,94 @@ export default function TriageResultView({ assessmentResult, onReset, activeRole
       lower.includes('model detected') ||
       lower.includes('model predicted') ||
       lower.includes('model probability') ||
-      lower.includes('model-related')
+      lower.includes('model-related') ||
+      lower.includes('training range') ||
+      lower.includes('model limitation') ||
+      lower.includes('training limitation') ||
+      lower.includes('capped value') ||
+      lower.includes('less reliable') ||
+      lower.includes('model indicator')
     );
   };
 
-  const reasonsList = rawReasons.filter(r => !isModelSpecificReason(r));
+  const reasonsList = rawReasons
+    .filter(r => !isTechnicalReason(r))
+    .map(r => cleanClinicalText(r))
+    .filter(r => r.length > 0);
+
+  // Categorize clinical findings for structured badge display: Menstrual, Clinical, PCOS Factor, Lifestyle
+  const getReasonCategory = (str) => {
+    const lower = String(str).toLowerCase();
+    
+    // 1. Clinical / Acute Red Flags
+    if (
+      lower.includes('heavy menstrual bleeding') ||
+      lower.includes('severe pain') ||
+      lower.includes('vomiting') ||
+      lower.includes('stool') ||
+      lower.includes('clinical') ||
+      lower.includes('safety')
+    ) {
+      return { 
+        label: lang === 'hi' ? 'क्लिनिकल' : 'Clinical', 
+        style: 'bg-rose-50 text-rose-700 border-rose-200' 
+      };
+    }
+    
+    // 2. Menstrual Abnormalities
+    if (
+      lower.includes('bleeding duration') ||
+      lower.includes('menstrual') ||
+      lower.includes('cycle') ||
+      lower.includes('period')
+    ) {
+      return { 
+        label: lang === 'hi' ? 'मासिक धर्म' : 'Menstrual', 
+        style: 'bg-indigo-50 text-indigo-700 border-indigo-200' 
+      };
+    }
+    
+    // 3. PCOS Factors
+    if (
+      lower.includes('hair') ||
+      lower.includes('acne') ||
+      lower.includes('pimples') ||
+      lower.includes('darkening') ||
+      lower.includes('weight gain') ||
+      lower.includes('pcos')
+    ) {
+      return { 
+        label: lang === 'hi' ? 'पीसीओएस कारक' : 'PCOS Factor', 
+        style: 'bg-amber-50 text-amber-800 border-amber-200' 
+      };
+    }
+    
+    // 4. Lifestyle Context
+    if (
+      lower.includes('fast-food') ||
+      lower.includes('fast food') ||
+      lower.includes('exercise') ||
+      lower.includes('lifestyle') ||
+      lower.includes('diet')
+    ) {
+      return { 
+        label: lang === 'hi' ? 'जीवनशैली' : 'Lifestyle', 
+        style: 'bg-slate-100 text-slate-700 border-slate-200' 
+      };
+    }
+    
+    return { 
+      label: lang === 'hi' ? 'क्लिनिकल' : 'Clinical', 
+      style: 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+    };
+  };
+
+  const MAX_DEFAULT_FINDINGS = 4;
+  const displayedReasons = showAllFindings ? reasonsList : reasonsList.slice(0, MAX_DEFAULT_FINDINGS);
 
   // Red Flags
   const redFlags = ml?.red_flags || (legacy.red_flags || []);
   const hasRedFlags = (redFlags && redFlags.length > 0) || Boolean(legacy.red_flag_triggered);
-
-  // Warnings and Model Limitations
-  const warnings = ml?.warnings || [];
-  const modelLimitations = ml?.model_limitations || [];
 
   // Medical Disclaimer
   const disclaimerText = ml?.disclaimer || legacy.disclaimer || 'This is an AI-assisted health screening and triage tool and is NOT a medical diagnosis. It does not replace professional clinical evaluation by a certified doctor.';
@@ -201,7 +282,7 @@ export default function TriageResultView({ assessmentResult, onReset, activeRole
                   }`}>
                     {rf.severity || 'HIGH'}
                   </span>
-                  <span className="font-medium leading-relaxed">{rf.message || rf}</span>
+                  <span className="font-medium leading-relaxed">{cleanClinicalText(rf.message || rf)}</span>
                 </div>
               ))
             ) : (
@@ -213,43 +294,40 @@ export default function TriageResultView({ assessmentResult, onReset, activeRole
         </div>
       )}
 
-      {/* 3. WHY THIS RESULT? (Authoritative Overall Reasons) */}
+      {/* 3. WHY THIS RESULT? (Authoritative Prioritized Clinical Findings) */}
       {reasonsList && reasonsList.length > 0 && (
         <div className="bg-white rounded-3xl p-6 md:p-8 shadow-md border border-slate-200 space-y-4">
-          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <Info className="w-5 h-5 text-emerald-600" />
-            <span>{lang === 'hi' ? 'यह परिणाम क्यों? (प्रमुख निष्कर्ष):' : 'Why This Result? (Key Clinical Findings)'}</span>
-          </h3>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <Info className="w-5 h-5 text-emerald-600" />
+              <span>{lang === 'hi' ? 'यह परिणाम क्यों? (प्रमुख निष्कर्ष):' : 'Why This Result? (Key Clinical Findings)'}</span>
+            </h3>
+            {reasonsList.length > MAX_DEFAULT_FINDINGS && (
+              <button
+                onClick={() => setShowAllFindings(!showAllFindings)}
+                className="text-xs font-bold text-emerald-700 hover:text-emerald-800 underline transition cursor-pointer"
+              >
+                {showAllFindings
+                  ? (lang === 'hi' ? 'प्रमुख निष्कर्ष दिखाएं' : 'Show top findings')
+                  : (lang === 'hi' ? `सभी ${reasonsList.length} निष्कर्ष देखें` : `View all findings (${reasonsList.length})`)}
+              </button>
+            )}
+          </div>
 
           <div className="grid md:grid-cols-2 gap-3">
-            {reasonsList.map((reasonStr, idx) => (
-              <div key={idx} className="p-3.5 rounded-2xl border border-slate-100 bg-slate-50 flex items-start gap-3">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
-                <p className="text-slate-800 text-xs font-semibold leading-relaxed">
-                  {reasonStr}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-
-
-      {/* 5. WARNINGS & MODEL LIMITATIONS (Displayed only when present) */}
-      {(warnings.length > 0 || modelLimitations.length > 0) && (
-        <div className="bg-amber-50/70 border border-amber-200 rounded-3xl p-5 md:p-6 shadow-sm space-y-2">
-          <div className="flex items-center gap-2 text-amber-800">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            <h4 className="text-xs font-extrabold uppercase tracking-wider">Model Training Limitations / Warnings</h4>
-          </div>
-          <div className="space-y-1.5 pl-6 text-xs text-amber-900">
-            {warnings.map((w, idx) => (
-              <p key={`w-${idx}`}>• {w}</p>
-            ))}
-            {modelLimitations.map((lim, idx) => (
-              <p key={`lim-${idx}`}>• {lim}</p>
-            ))}
+            {displayedReasons.map((reasonStr, idx) => {
+              const category = getReasonCategory(reasonStr);
+              return (
+                <div key={idx} className="p-3.5 rounded-2xl border border-slate-200/70 bg-slate-50 flex items-start gap-2.5 shadow-xs">
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border flex-shrink-0 mt-0.5 ${category.style}`}>
+                    {category.label}
+                  </span>
+                  <p className="text-slate-800 text-xs font-semibold leading-relaxed">
+                    {reasonStr}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
