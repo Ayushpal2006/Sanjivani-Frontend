@@ -5,7 +5,7 @@ import math
 import datetime
 import urllib.request
 import urllib.parse
-from fastapi import FastAPI, Depends, HTTPException, Query, Header
+from fastapi import FastAPI, Depends, HTTPException, Query, Header, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -50,6 +50,15 @@ app.add_middleware(
 # -------------------------------------------------------------
 # 0. SYSTEM HEALTH CHECK
 # -------------------------------------------------------------
+@app.head("/health", tags=["System"])
+def health_head():
+    """
+    Lightweight HEAD health-check endpoint for uptime monitors (e.g. UptimeRobot, Render).
+    Returns HTTP 200 with zero response body.
+    """
+    return Response(status_code=200)
+
+
 @app.get("/health", tags=["System"])
 def health_check(db: Session = Depends(get_db)):
     """

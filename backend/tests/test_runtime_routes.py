@@ -347,7 +347,7 @@ class TestRuntimeRoutes(unittest.TestCase):
     # Main Backend Health Check Endpoint Tests
     # =========================================================================
 
-    def test_health_endpoint(self):
+    def test_health_get_endpoint(self):
         """Verify GET /health returns HTTP 200 with service and db status"""
         res = self.client.get("/health")
         self.assertEqual(res.status_code, 200)
@@ -359,6 +359,12 @@ class TestRuntimeRoutes(unittest.TestCase):
         self.assertNotIn("ADMIN_API_TOKEN", data)
         self.assertNotIn("ML_API_URL", data)
         self.assertNotIn("DATABASE_URL", data)
+
+    def test_health_head_endpoint(self):
+        """Verify HEAD /health returns HTTP 200 with zero response body for uptime monitors"""
+        res = self.client.head("/health")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.text, "")
 
 
 if __name__ == "__main__":
