@@ -29,23 +29,30 @@ export default function TriageResultView({ assessmentResult, onReset, activeRole
   const recommendationText = ml?.recommendation || legacy.recommended_action || 'Consult with a healthcare provider for comprehensive evaluation.';
   const recommendationTextHindi = legacy.recommended_action_hindi || '';
 
-  // Authoritative Overall Reasons
-  const reasonsList = ml?.overall_reasons && ml.overall_reasons.length > 0
+  // Authoritative Clinical Reasons (Filtered to remove model-specific strings from user presentation)
+  const rawReasons = ml?.overall_reasons && ml.overall_reasons.length > 0
     ? ml.overall_reasons
     : (legacy.reasons ? legacy.reasons.map(r => (typeof r === 'string' ? r : r.title)) : []);
+
+  const isModelSpecificReason = (str) => {
+    if (!str) return true;
+    const lower = String(str).toLowerCase();
+    return (
+      lower.includes('ml model') ||
+      lower.includes('logistic regression') ||
+      lower.includes('probability:') ||
+      lower.includes('model detected') ||
+      lower.includes('model predicted') ||
+      lower.includes('model probability') ||
+      lower.includes('model-related')
+    );
+  };
+
+  const reasonsList = rawReasons.filter(r => !isModelSpecificReason(r));
 
   // Red Flags
   const redFlags = ml?.red_flags || (legacy.red_flags || []);
   const hasRedFlags = (redFlags && redFlags.length > 0) || Boolean(legacy.red_flag_triggered);
-
-  // Secondary Machine Learning Outputs
-  const pcosProbability = ml?.pcos_probability != null
-    ? ml.pcos_probability
-    : (legacy.risk_probability != null ? legacy.risk_probability : null);
-
-  const modelPredictionLabel = ml?.model_prediction_label || (
-    pcosProbability != null && pcosProbability >= 0.4 ? 'Higher PCOS-related risk' : 'Lower PCOS-related risk'
-  );
 
   // Warnings and Model Limitations
   const warnings = ml?.warnings || [];
@@ -227,58 +234,7 @@ export default function TriageResultView({ assessmentResult, onReset, activeRole
         </div>
       )}
 
-      {/* 4. MACHINE LEARNING ASSESSMENT (SECONDARY SCREENING SIGNAL) */}
-      <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 md:p-8 shadow-sm space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-2 border-b border-slate-200 pb-3">
-          <div className="flex items-center gap-2">
-            <Cpu className="w-5 h-5 text-slate-700" />
-            <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">
-              {lang === 'hi' ? 'मशीन लर्निंग स्क्रीनिंग विश्लेषण (द्वितीयक संकेत)' : 'Machine Learning Screening Signal (Secondary)'}
-            </h3>
-          </div>
-          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700">
-            Logistic Regression Model
-          </span>
-        </div>
 
-        <div className="grid sm:grid-cols-2 gap-4">
-          {/* Model Risk Probability */}
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2">
-            <span className="text-xs font-semibold text-slate-500 block">Model Risk Probability</span>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-black text-slate-900">
-                {pcosProbability != null ? `${(pcosProbability * 100).toFixed(1)}%` : 'N/A'}
-              </span>
-              <span className="text-xs text-slate-500 font-medium">(screening score)</span>
-            </div>
-            {pcosProbability != null && (
-              <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                <div
-                  className={`h-2 rounded-full ${
-                    pcosProbability >= 0.7 ? 'bg-red-500' : pcosProbability >= 0.4 ? 'bg-amber-500' : 'bg-emerald-500'
-                  }`}
-                  style={{ width: `${Math.min(Math.max(pcosProbability * 100, 5), 100)}%` }}
-                ></div>
-              </div>
-            )}
-          </div>
-
-          {/* Model Indicator */}
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-1">
-            <span className="text-xs font-semibold text-slate-500 block">Model Indicator</span>
-            <span className="text-base font-bold text-slate-900 block pt-1">
-              {modelPredictionLabel}
-            </span>
-            <p className="text-[11px] text-slate-500">
-              Evaluated across 13 clinical, anthropometric, and lifestyle features.
-            </p>
-          </div>
-        </div>
-
-        <p className="text-[11px] text-slate-500 leading-relaxed italic">
-          Note: This probability represents an algorithmic screening estimation based on reported symptoms. It is not a diagnostic test and should be interpreted by a healthcare worker in combination with full clinical context.
-        </p>
-      </div>
 
       {/* 5. WARNINGS & MODEL LIMITATIONS (Displayed only when present) */}
       {(warnings.length > 0 || modelLimitations.length > 0) && (

@@ -39,6 +39,22 @@ class AssessmentInputSchema(BaseModel):
     pain_location: str = "None"
     wellbeing: str = "Calm / Stable"
     
+    # Safety Triage V2 Specific Inputs (Optional for backward compatibility)
+    dizziness: Optional[Any] = False
+    fainting: Optional[Any] = False
+    shortness_of_breath: Optional[Any] = False
+    rapid_pad_saturation: Optional[Any] = False
+    flooding_gushing: Optional[Any] = False
+    large_blood_clots: Optional[Any] = False
+    pregnancy_possible: Optional[Any] = False
+    sudden_severe_pelvic_pain: Optional[Any] = False
+    one_sided_pelvic_pain: Optional[Any] = False
+    shoulder_tip_pain: Optional[Any] = False
+    fever_chills: Optional[Any] = False
+    unable_to_keep_fluids: Optional[Any] = False
+    bleeding_between_periods: Optional[Any] = False
+    bleeding_after_sex: Optional[Any] = False
+    
     submitted_by_role: str = "ASHA" # ASHA or Patient
 
 class PredictionResultSchema(BaseModel):

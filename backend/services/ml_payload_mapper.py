@@ -183,7 +183,37 @@ def build_ml_payload(assessment: Union[Dict[str, Any], Any]) -> Dict[str, Any]:
     blood_in_stool = _parse_bool("blood_in_stool", data.get("blood_in_stool"))
     vomiting = _parse_bool("vomiting", data.get("vomiting"))
 
-    # 6. Construct exact 16-field PCOSPredictionRequest dictionary
+    def _parse_optional_bool(field_name: str, val: Any, default: bool = False) -> bool:
+        if val is None:
+            return default
+        if isinstance(val, bool):
+            return val
+        if isinstance(val, (int, float)) and val in (0, 1):
+            return bool(val)
+        s = str(val).strip().lower()
+        if s in ("true", "1", "yes"):
+            return True
+        if s in ("false", "0", "no", ""):
+            return False
+        return default
+
+    # Safety Triage V2 Specific Inputs
+    dizziness = _parse_optional_bool("dizziness", data.get("dizziness"))
+    fainting = _parse_optional_bool("fainting", data.get("fainting"))
+    shortness_of_breath = _parse_optional_bool("shortness_of_breath", data.get("shortness_of_breath"))
+    rapid_pad_saturation = _parse_optional_bool("rapid_pad_saturation", data.get("rapid_pad_saturation"))
+    flooding_gushing = _parse_optional_bool("flooding_gushing", data.get("flooding_gushing"))
+    large_blood_clots = _parse_optional_bool("large_blood_clots", data.get("large_blood_clots"))
+    pregnancy_possible = _parse_optional_bool("pregnancy_possible", data.get("pregnancy_possible"))
+    sudden_severe_pelvic_pain = _parse_optional_bool("sudden_severe_pelvic_pain", data.get("sudden_severe_pelvic_pain"))
+    one_sided_pelvic_pain = _parse_optional_bool("one_sided_pelvic_pain", data.get("one_sided_pelvic_pain"))
+    shoulder_tip_pain = _parse_optional_bool("shoulder_tip_pain", data.get("shoulder_tip_pain"))
+    fever_chills = _parse_optional_bool("fever_chills", data.get("fever_chills"))
+    unable_to_keep_fluids = _parse_optional_bool("unable_to_keep_fluids", data.get("unable_to_keep_fluids"))
+    bleeding_between_periods = _parse_optional_bool("bleeding_between_periods", data.get("bleeding_between_periods"))
+    bleeding_after_sex = _parse_optional_bool("bleeding_after_sex", data.get("bleeding_after_sex"))
+
+    # 6. Construct exact PCOSPredictionRequest dictionary
     return {
         "age": age,
         "weight": weight,
@@ -201,4 +231,18 @@ def build_ml_payload(assessment: Union[Dict[str, Any], Any]) -> Dict[str, Any]:
         "severe_pain": severe_pain,
         "blood_in_stool": blood_in_stool,
         "vomiting": vomiting,
+        "dizziness": dizziness,
+        "fainting": fainting,
+        "shortness_of_breath": shortness_of_breath,
+        "rapid_pad_saturation": rapid_pad_saturation,
+        "flooding_gushing": flooding_gushing,
+        "large_blood_clots": large_blood_clots,
+        "pregnancy_possible": pregnancy_possible,
+        "sudden_severe_pelvic_pain": sudden_severe_pelvic_pain,
+        "one_sided_pelvic_pain": one_sided_pelvic_pain,
+        "shoulder_tip_pain": shoulder_tip_pain,
+        "fever_chills": fever_chills,
+        "unable_to_keep_fluids": unable_to_keep_fluids,
+        "bleeding_between_periods": bleeding_between_periods,
+        "bleeding_after_sex": bleeding_after_sex,
     }

@@ -248,22 +248,38 @@ The Machine Learning model is **NOT** the final clinical decision-maker. The fin
                         └────────────────────────────────────────┘
 ```
 
-> **Core Principle:** A patient with low ML probability (`0.15`) who presents with heavy bleeding or severe pain will be safely elevated to `MODERATE` or `HIGH` triage regardless of the statistical score.
+## 8. Statistical ML Prediction vs. Overall Safety Triage
+
+> ⚠️ **ARCHITECTURAL & CLINICAL SEPARATION:**  
+> **Statistical ML Probability ≠ Overall Safety Triage.**  
+> The Scikit-learn Logistic Regression model produces an internal probability estimation based solely on 13 baseline demographic, metabolic, and lifestyle features. **It does NOT and MUST NOT dictate emergency safety outcomes.**  
+> 
+> - **Internal Auditing & Analytics:** Raw `pcos_probability`, `model_prediction`, and `model_prediction_label` are persisted in the database and API responses for audit logs, research, and governance.
+> - **User-Facing UI:** Statistical percentages (e.g., `64.5%`) and model jargon are **hidden** from patient and frontline user-facing result screens. Frontline users see clear, human-readable clinical triage categories (`LOW`, `MODERATE`, `HIGH`, `CRITICAL`), key clinical findings, red flags, and recommended actions.
+> - **Zero-Fabrication Guarantee:** Safety rules **NEVER** alter or fabricate pure ML model probabilities (e.g. Setting `pcos_probability = 1.0` is strictly forbidden).
 
 ---
 
-## 9. Safety & Red-Flag Layer
+## 9. Safety & Red-Flag Layer (Safety Triage V2 Matrix)
 
-The safety engine in `ml-service/app/safety_rules.py` enforces deterministic clinical rules:
+The deterministic safety engine in `ml-service/app/safety_rules.py` enforces strict priority rules (`CRITICAL` > `HIGH` > `MODERATE` > `LOW`):
 
-### Red-Flag Thresholds:
-1. **Prolonged Bleeding (8–12 days):** Severity: `Medium` ➔ Evaluated in triage.
-2. **Significantly Prolonged Bleeding (13–20 days):** Severity: `High` ➔ Elevates triage to `HIGH`.
-3. **Extreme Bleeding (≥21 days):** Severity: `Critical` ➔ Forces `CRITICAL` emergency triage.
-4. **Heavy Menstrual Bleeding (`heavy_bleeding = true`):** Severity: `High` ➔ Triggers clinical referral.
-5. **Severe Pelvic/Abdominal Pain (`severe_pain = true`):** Severity: `High` ➔ Triggers clinical referral.
-6. **Persistent Nausea/Vomiting (`vomiting = true`):** Severity: `High` ➔ General acute concern.
-7. **Blood in Stool (`blood_in_stool = true`):** Severity: `Critical` ➔ Forces `CRITICAL` escalation.
+### A. Bleeding Duration Bounds
+- **1–7 days:** Normal baseline duration; no escalation based on duration alone.
+- **8–10 days:** Prolonged bleeding ➔ Escalates to at least **`MODERATE`**.
+- **11–20 days:** Significantly prolonged bleeding ➔ Escalates to at least **`HIGH`**.
+- **≥21 days:** Extremely prolonged bleeding ➔ Forces **`CRITICAL`** emergency triage.
+
+### B. High-Value Safety Symptoms
+- **Acute Hemodynamic Instability:** Fainting, near-fainting, syncope, or significant dizziness.
+- **Respiratory Distress:** Unexplained shortness of breath or difficulty breathing.
+- **Heavy / Rapid Flow:** Soaking through pads/tampons every 1–2 hours, flooding/gushing bleeding, large blood clots.
+- **Pregnancy-Related Emergencies:** Possible pregnancy combined with vaginal bleeding, sudden/severe pelvic pain, one-sided pelvic pain, shoulder-tip pain (diaphragmatic irritation sign), or fainting.
+- **Severe Infectious / GI Red Flags:** Blood in stool (`CRITICAL`), unable to keep fluids down due to persistent vomiting (`HIGH`), fever/chills with pelvic pain (`HIGH`).
+
+### C. Precedence & Triage Guarantees
+- `CRITICAL` is authoritative and can never be downgraded by any lower rule or low ML probability.
+- All safety rules describe observed clinical risk factors and recommendations; they **do not diagnose** medical conditions.
 
 ---
 

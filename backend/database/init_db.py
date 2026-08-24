@@ -37,6 +37,21 @@ def migrate_db():
                     ("warnings_json", "TEXT"),
                     ("model_limitations_json", "TEXT"),
                     ("disclaimer", "TEXT"),
+                    # Safety Triage V2 Columns
+                    ("dizziness", "BOOLEAN"),
+                    ("fainting", "BOOLEAN"),
+                    ("shortness_of_breath", "BOOLEAN"),
+                    ("rapid_pad_saturation", "BOOLEAN"),
+                    ("flooding_gushing", "BOOLEAN"),
+                    ("large_blood_clots", "BOOLEAN"),
+                    ("pregnancy_possible", "BOOLEAN"),
+                    ("sudden_severe_pelvic_pain", "BOOLEAN"),
+                    ("one_sided_pelvic_pain", "BOOLEAN"),
+                    ("shoulder_tip_pain", "BOOLEAN"),
+                    ("fever_chills", "BOOLEAN"),
+                    ("unable_to_keep_fluids", "BOOLEAN"),
+                    ("bleeding_between_periods", "BOOLEAN"),
+                    ("bleeding_after_sex", "BOOLEAN"),
                 ]
 
                 for col_name, col_type in new_canonical_cols:
