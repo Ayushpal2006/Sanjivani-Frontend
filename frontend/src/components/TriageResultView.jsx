@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertTriangle, CheckCircle2, Info, ArrowRight, Calendar, Building2, UserCheck, Heart, ShieldAlert, Cpu, AlertCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Info, ArrowRight, Calendar, Building2, UserCheck, Heart, ShieldAlert } from 'lucide-react';
 
 export default function TriageResultView({ assessmentResult, onReset, activeRole, lang }) {
   const [referralCreated, setReferralCreated] = useState(false);
@@ -28,7 +28,12 @@ export default function TriageResultView({ assessmentResult, onReset, activeRole
 
   // Primary Recommendation
   const recommendationText = ml?.recommendation || legacy.recommended_action || 'Consult with a healthcare provider for comprehensive evaluation.';
-  const recommendationTextHindi = legacy.recommended_action_hindi || '';
+  // Extract raw reasons safely from API response (ml_assessment.overall_reasons or legacy triage_result.reasons)
+  const rawReasons = Array.isArray(ml?.overall_reasons) && ml.overall_reasons.length > 0
+    ? ml.overall_reasons
+    : (Array.isArray(legacy?.reasons)
+        ? legacy.reasons.map(r => (typeof r === 'string' ? r : r?.title || ''))
+        : []);
 
   // Clean clinical text by removing any technical artifacts like '(outside ML training range)', '(capped value)', etc.
   const cleanClinicalText = (text) => {
@@ -60,10 +65,10 @@ export default function TriageResultView({ assessmentResult, onReset, activeRole
     );
   };
 
-  const reasonsList = rawReasons
-    .filter(r => !isTechnicalReason(r))
+  const reasonsList = (rawReasons || [])
+    .filter(r => r && typeof r === 'string' && !isTechnicalReason(r))
     .map(r => cleanClinicalText(r))
-    .filter(r => r.length > 0);
+    .filter(r => r && r.length > 0);
 
   // Categorize clinical findings for structured badge display: Menstrual, Clinical, PCOS Factor, Lifestyle
   const getReasonCategory = (str) => {
@@ -295,25 +300,25 @@ export default function TriageResultView({ assessmentResult, onReset, activeRole
       )}
 
       {/* 3. WHY THIS RESULT? (Authoritative Prioritized Clinical Findings) */}
-      {reasonsList && reasonsList.length > 0 && (
-        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-md border border-slate-200 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <Info className="w-5 h-5 text-emerald-600" />
-              <span>{lang === 'hi' ? 'यह परिणाम क्यों? (प्रमुख निष्कर्ष):' : 'Why This Result? (Key Clinical Findings)'}</span>
-            </h3>
-            {reasonsList.length > MAX_DEFAULT_FINDINGS && (
-              <button
-                onClick={() => setShowAllFindings(!showAllFindings)}
-                className="text-xs font-bold text-emerald-700 hover:text-emerald-800 underline transition cursor-pointer"
-              >
-                {showAllFindings
-                  ? (lang === 'hi' ? 'प्रमुख निष्कर्ष दिखाएं' : 'Show top findings')
-                  : (lang === 'hi' ? `सभी ${reasonsList.length} निष्कर्ष देखें` : `View all findings (${reasonsList.length})`)}
-              </button>
-            )}
-          </div>
+      <div className="bg-white rounded-3xl p-6 md:p-8 shadow-md border border-slate-200 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <Info className="w-5 h-5 text-emerald-600" />
+            <span>{lang === 'hi' ? 'यह परिणाम क्यों? (प्रमुख निष्कर्ष):' : 'Why This Result? (Key Clinical Findings)'}</span>
+          </h3>
+          {reasonsList && reasonsList.length > MAX_DEFAULT_FINDINGS && (
+            <button
+              onClick={() => setShowAllFindings(!showAllFindings)}
+              className="text-xs font-bold text-emerald-700 hover:text-emerald-800 underline transition cursor-pointer"
+            >
+              {showAllFindings
+                ? (lang === 'hi' ? 'प्रमुख निष्कर्ष दिखाएं' : 'Show top findings')
+                : (lang === 'hi' ? `सभी ${reasonsList.length} निष्कर्ष देखें` : `View all findings (${reasonsList.length})`)}
+            </button>
+          )}
+        </div>
 
+        {reasonsList && reasonsList.length > 0 ? (
           <div className="grid md:grid-cols-2 gap-3">
             {displayedReasons.map((reasonStr, idx) => {
               const category = getReasonCategory(reasonStr);
@@ -329,8 +334,14 @@ export default function TriageResultView({ assessmentResult, onReset, activeRole
               );
             })}
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="text-xs text-slate-500 italic p-3.5 bg-slate-50 rounded-2xl border border-slate-100">
+            {lang === 'hi'
+              ? 'प्रदान की गई जानकारी के आधार पर मूल्यांकन पूरा किया गया।'
+              : 'Assessment completed based on the information provided.'}
+          </p>
+        )}
+      </div>
 
       {/* 6. ASHA WORKER CLINICAL ACTIONS BAR (Hidden for Patient role) */}
       {!isPatientRole ? (
